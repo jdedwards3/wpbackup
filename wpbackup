@@ -1,0 +1,22 @@
+#!/bin/bash
+
+while getopts "u:h:f:" flag
+do
+  case "$flag" in
+    u) user=${OPTARG};;
+    h) host=${OPTARG};;
+    f) folder=${OPTARG};;
+  esac
+done
+
+stamp=$( date '+%Y-%m-%d_%H%M' );
+
+wp_path=$( ssh ${user}@${host} wp find ${folder} --field='wp_path' );
+# if wp find isn't available
+#wp_path="/home/${user}/${folder}";
+
+ssh ${user}@${host} wp maintenance-mode activate --path=${wp_path} && \
+ssh ${user}@${host} tar czf - ${folder} > backup_${stamp}_${folder}.tar.gz && \
+ssh ${user}@${host} wp db export --path=${wp_path} - | gzip > backup_${stamp}_${folder}-db.sql.gz && \
+ssh ${user}@${host} wp maintenance-mode deactivate --path=${wp_path}
+
