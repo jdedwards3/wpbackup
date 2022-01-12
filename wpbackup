@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "starting backup..."
+
 while getopts "u:h:f:" flag
 do
   case "$flag" in
@@ -9,14 +11,23 @@ do
   esac
 done
 
-stamp=$( date '+%Y-%m-%d_%H%M' );
+stamp=$( date '+%Y-%m-%d_%H%M' )
 
-wp_path=$( ssh ${user}@${host} wp find ${folder} --field='wp_path' );
+wp_path=$( ssh ${user}@${host} wp find ${folder} --field='wp_path' ) &&
 # if wp find isn't available
-#wp_path="/home/${user}/${folder}";
+# wp_path="/home/${user}/${folder}" &&
 
-ssh ${user}@${host} wp maintenance-mode activate --path=${wp_path} && \
-ssh ${user}@${host} tar czf - ${folder} > backup_${stamp}_${folder}.tar.gz && \
-ssh ${user}@${host} wp db export --path=${wp_path} - | gzip > backup_${stamp}_${folder}-db.sql.gz && \
-ssh ${user}@${host} wp maintenance-mode deactivate --path=${wp_path}
+ssh ${user}@${host} wp maintenance-mode activate --path=${wp_path} &&
 
+echo "archiving files..." &&
+ssh ${user}@${host} tar czvf - ${folder} > backup_${stamp}_${folder}.tar.gz &&
+echo "files archived successfully" &&
+
+echo "exporting database..." &&
+ssh ${user}@${host} wp db export --path=${wp_path} - | gzip > backup_${stamp}_${folder}-db.sql.gz &&
+echo "database exported successfully" &&
+
+ssh ${user}@${host} wp maintenance-mode deactivate --path=${wp_path} &&
+
+echo "compressed file archive: ${PWD}/backup_${stamp}_${folder}.tar.gz" &&
+echo "compressed database export: ${PWD}/backup_${stamp}_${folder}-db.sql.gz" 
